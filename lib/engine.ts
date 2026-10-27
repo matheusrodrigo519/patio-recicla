@@ -1,6 +1,6 @@
 export type Material={id:string,name:string,goal:number,alert:number,qty:number,value:number|null};
-export type Move={id:string,material:string,type:string,qty:number,total:number|null,unitPrice?:number,cost:number|null,expense:number,date:string,party:string,note:string,created:string};
-export type Load={id:string,material:string,qty:number,party:string,date:string,status:string,total:number,unitPrice?:number,expense:number};
+export type Move={financialCleared?:boolean,id:string,material:string,type:string,qty:number,total:number|null,unitPrice?:number,cost:number|null,expense:number,date:string,party:string,note:string,created:string};
+export type Load={id:string,material:string,qty:number,party:string,date:string,status:string,total:number|null,unitPrice?:number,expense:number};
 export type State={materials:Material[],moves:Move[],loads:Load[]};
 export const initial=():State=>({materials:[['cobre','Cobre',1000,50],['aluminio','Alumínio',500,30],['ferro','Ferro',5000,200],['latao','Latão',200,20]].map(([id,name,goal,alert])=>({id:String(id),name:String(name),goal:Number(goal),alert:Number(alert),qty:0,value:0})),moves:[],loads:[]});
 export const reserved=(s:State,id:string)=>s.loads.filter(l=>l.material===id&&!['Concluída','Cancelada'].includes(l.status)).reduce((a,l)=>a+l.qty,0);
@@ -19,4 +19,12 @@ export function apply(s:State,c:any):State{
  if(c.type==='Venda'&&total===null)throw Error('Informe o valor da venda.');if(c.type==='Perda'&&!note)throw Error('Informe o motivo da perda.');
  if(c.type==='Entrada'){m.value=m.value===null||total===null?null:m.value+total;m.qty+=qty;}else{const own=c.loadId?s.loads.find(l=>l.id===c.loadId)?.qty||0:0;if(qty>m.qty-reserved(s,m.id)+own+.000001)throw Error('Estoque disponível insuficiente. Confira as reservas.');cost=m.value===null?null:m.value/m.qty*qty;m.qty=Math.max(0,m.qty-qty);m.value=m.qty<.000001?0:m.value===null?null:Math.max(0,m.value-(cost||0));}
  s.moves.push({id:id(),material:m.id,type:c.type,qty,total,...(c.type==='Venda'?{unitPrice:c.unitPrice==null?total!/qty:num(c.unitPrice)}:{}),cost,expense,date:c.date,party:str(c.party),note,created:new Date().toISOString()});return s;
+}
+
+// Removes stored historical amounts without rewriting physical inventory.
+export function clearFinancials(s:State):State{
+ for(const m of s.materials)m.value=m.qty>0?null:0;
+ for(const m of s.moves){m.total=null;m.cost=null;m.expense=0;delete m.unitPrice;m.financialCleared=true;}
+ for(const l of s.loads)if(['Concluída','Cancelada'].includes(l.status)){l.total=null;l.expense=0;delete l.unitPrice;}
+ return s;
 }
