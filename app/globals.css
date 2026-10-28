@@ -9,3 +9,5 @@ button.danger{color:#a42626;border:1px solid #c84b4b}button.primary.danger{backg
 button:disabled{cursor:not-allowed}
 
 .paymentFilter{display:block;max-width:260px;margin:0 0 20px}.paymentFilter select{display:block;width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;background:white}
+
+.valuationSummary{display:flex;align-items:center;justify-content:space-between;gap:24px;background:#eaf4ed;border:1px solid #cde1d3;border-radius:16px;padding:24px;margin:0 0 28px}.valuationSummary h2{margin:6px 0}.valuationSummary p{font-size:13px;color:#52675a;max-width:600px}.valuationSummary>strong{font-size:30px;color:#17543b;white-space:nowrap}.materialValuation{display:grid;gap:12px;margin:18px 0;padding-top:16px;border-top:1px solid #e8ece8}.materialValuation>span{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#647068}.materialValuation strong{color:#17543b;font-size:16px}.materialValuation .secondary{justify-content:center}@media(max-width:700px){.valuationSummary{align-items:flex-start;flex-direction:column}.valuationSummary>strong{font-size:26px}}

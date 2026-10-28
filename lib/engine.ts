@@ -1,5 +1,5 @@
 export type Customer={id:string,name:string,contact:string,pixKey:string};
-export type Material={id:string,name:string,goal:number,alert:number,qty:number,value:number|null};
+export type Material={estimatedPrice?:number|null,id:string,name:string,goal:number,alert:number,qty:number,value:number|null};
 export type Move={customerId?:string,contact?:string,pixKey?:string,paymentMethod?:string,paymentStatus?:string,loadId?:string,financialCleared?:boolean,id:string,material:string,type:string,qty:number,total:number|null,unitPrice?:number,cost:number|null,expense:number,date:string,party:string,note:string,created:string};
 export type Load={id:string,material:string,qty:number,party:string,date:string,status:string,total:number|null,unitPrice?:number,expense:number};
 export type State={customers?:Customer[],materials:Material[],moves:Move[],loads:Load[]};
@@ -10,6 +10,10 @@ function str(v:any,max=200){return String(v||'').trim().slice(0,max);}
 function date(v:any){if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v)))throw Error('Informe a data.');return v;}
 export const saleTotal=(qty:number,price:number)=>{const total=Math.round((num(qty,.001)*num(price)+Number.EPSILON)*100)/100;if(!Number.isFinite(total)||total>1e12)throw Error('Valor da venda excede o limite.');return total;};
 export function apply(s:State,c:any):State{
+ if(c.action==='valuation'){
+ const m=s.materials.find(x=>x.id===c.material);if(!m)throw Error('Material não encontrado.');
+ m.estimatedPrice=c.price===''||c.price==null?null:num(c.price);return s;
+ }
  if(c.action==='customer'){
  s.customers??=[];const name=str(c.name,120);if(!name)throw Error('Informe o nome do cliente.');
  const data={name,contact:str(c.contact,100),pixKey:str(c.pixKey,200)};
@@ -99,4 +103,9 @@ export function entryDetails(s:State,c:any){
  if(!['','Pix','Dinheiro','Transferência','Cartão','Outro'].includes(paymentMethod))throw Error('Forma de pagamento inválida.');
  if(!['Pago','Não pago','Não informado'].includes(paymentStatus))throw Error('Status de pagamento inválido.');
  return {customerId:customerId||undefined,contact:str(c.contact,100),pixKey:str(c.pixKey,200),paymentMethod,paymentStatus};
+}
+
+export const estimatedMaterialValue=(m:Material):number|null=>m.qty===0?0:m.estimatedPrice==null?null:Math.round((m.qty*m.estimatedPrice+Number.EPSILON)*100)/100;
+export function stockValuation(materials:Material[]){
+ return {total:materials.reduce((sum,m)=>sum+(estimatedMaterialValue(m)||0),0),missing:materials.filter(m=>m.qty>0&&m.estimatedPrice==null).length};
 }
