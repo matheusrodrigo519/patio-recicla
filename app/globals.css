@@ -7,3 +7,5 @@
 button.danger{color:#a42626;border:1px solid #c84b4b}button.primary.danger{background:#a42626;color:white}
 
 button:disabled{cursor:not-allowed}
+
+.paymentFilter{display:block;max-width:260px;margin:0 0 20px}.paymentFilter select{display:block;width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;background:white}
