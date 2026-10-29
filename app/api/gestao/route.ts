@@ -6,7 +6,7 @@ export const dynamic='force-dynamic';
 // All reads and writes require the business login, independently of hosting visibility.
 async function handleGET(req:Request){if(!await authenticated(req))return denied();const row=await env.DB!.prepare('SELECT version,payload FROM records WHERE id=?').bind('business').first<any>();return Response.json({version:row?.version||0,state:row?JSON.parse(row.payload):initial()},{headers:{'Cache-Control':'no-store'}});}
 async function handlePOST(req:Request){if(!await authenticated(req))return denied();if(!sameOrigin(req))return Response.json({error:"Origem inválida."},{status:403});try{const body=await req.json() as {version:number;command:Record<string,any>};delete body.command.loadId;if(body.command.action==='move'&&body.command.type==='Ajuste')return Response.json({error:'Use a opção Corrigir quantidade.'},{status:403});
-if((['clearFinancials','adjustStock','editMove','deleteMove','deleteCustomer'].includes(body.command.action)||(body.command.action==='customer'&&body.command.id)||(body.command.action==='material'&&body.command.material))){
+if((['clearFinancials','adjustStock','editMove','deleteMove','deleteCustomer','deleteExpense'].includes(body.command.action)||(['customer','businessExpense'].includes(body.command.action)&&body.command.id)||(body.command.action==='material'&&body.command.material))){
  const password=body.command.password;
  if(typeof password!=='string'||!password||password.length>256)return Response.json({error:'Informe a senha do administrador.'},{status:400});
  if(!await verifyPassword(password))return Response.json({error:'Senha do administrador incorreta.'},{status:403});

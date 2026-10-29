@@ -2,7 +2,8 @@ export type Customer={address?:string,id:string,name:string,contact:string,pixKe
 export type Material={estimatedPrice?:number|null,id:string,name:string,goal:number,alert:number,qty:number,value:number|null};
 export type Move={customerId?:string,contact?:string,pixKey?:string,paymentMethod?:string,paymentStatus?:string,loadId?:string,financialCleared?:boolean,id:string,material:string,type:string,qty:number,total:number|null,unitPrice?:number,cost:number|null,expense:number,date:string,party:string,note:string,created:string};
 export type Load={id:string,material:string,qty:number,party:string,date:string,status:string,total:number|null,unitPrice?:number,expense:number};
-export type State={customers?:Customer[],materials:Material[],moves:Move[],loads:Load[]};
+export type BusinessExpense={id:string,name:string,category:string,date:string,qty:number,unitPrice:number,total:number,supplier:string,note:string,created:string};
+export type State={businessExpenses?:BusinessExpense[],customers?:Customer[],materials:Material[],moves:Move[],loads:Load[]};
 export const initial=():State=>({materials:[['cobre','Cobre',1000,50],['aluminio','Alumínio',500,30],['ferro','Ferro',5000,200],['latao','Latão',200,20]].map(([id,name,goal,alert])=>({id:String(id),name:String(name),goal:Number(goal),alert:Number(alert),qty:0,value:0})),moves:[],loads:[]});
 export const reserved=(s:State,id:string)=>s.loads.filter(l=>l.material===id&&!['Concluída','Cancelada'].includes(l.status)).reduce((a,l)=>a+l.qty,0);
 function num(v:any,min=0){const n=Number(v);if(v===''||v==null||!Number.isFinite(n)||n<min||n>1e12)throw Error('Informe um valor numérico válido.');return n;}
@@ -11,6 +12,16 @@ function date(v:any){if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.pa
 export const saleTotal=(qty:number,price:number)=>{const total=Math.round(num(qty,.001)*num(price)*100*(1+Number.EPSILON))/100;if(!Number.isFinite(total)||total>1e12)throw Error('Valor da venda excede o limite.');return total;};
 export const purchaseTotal=(qty:number,c:any):number|null=>Object.prototype.hasOwnProperty.call(c,'unitPrice')?(c.unitPrice===''||c.unitPrice==null?null:saleTotal(qty,num(c.unitPrice))):(c.total===''||c.total==null?null:num(c.total));
 export function apply(s:State,c:any):State{
+ if(c.action==='businessExpense'||c.action==='deleteExpense'){
+ s.businessExpenses??=[];
+ const old=c.id?s.businessExpenses.find(x=>x.id===c.id):undefined;
+ if(c.id&&!old)throw Error('Gasto não encontrado.');
+ if(c.action==='deleteExpense'){if(!old)throw Error('Gasto não encontrado.');s.businessExpenses=s.businessExpenses.filter(x=>x.id!==c.id);return s;}
+ const name=str(c.name,120),category=str(c.category,80);if(!name||!category)throw Error('Informe o item e a categoria.');
+ const qty=num(c.qty,.001),unitPrice=num(c.unitPrice),total=saleTotal(qty,unitPrice);
+ const data={name,category,qty,unitPrice,total,date:date(c.date),supplier:str(c.supplier),note:str(c.note,500)};
+ if(old)Object.assign(old,data);else s.businessExpenses.push({id:crypto.randomUUID(),created:new Date().toISOString(),...data});return s;
+ }
  if(c.action==='valuation'){
  const m=s.materials.find(x=>x.id===c.material);if(!m)throw Error('Material não encontrado.');
  m.estimatedPrice=c.price===''||c.price==null?null:num(c.price);return s;
@@ -46,6 +57,7 @@ export function apply(s:State,c:any):State{
 
 // Removes stored historical amounts without rewriting physical inventory.
 export function clearFinancials(s:State):State{
+ s.businessExpenses=[];
  for(const m of s.materials)m.value=m.qty>0?null:0;
  for(const m of s.moves){m.total=null;m.cost=null;m.expense=0;delete m.unitPrice;m.financialCleared=true;}
  for(const l of s.loads)if(['Concluída','Cancelada'].includes(l.status)){l.total=null;l.expense=0;delete l.unitPrice;}
