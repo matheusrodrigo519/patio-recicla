@@ -1,4 +1,4 @@
-export type Customer={id:string,name:string,contact:string,pixKey:string};
+export type Customer={address?:string,id:string,name:string,contact:string,pixKey:string};
 export type Material={estimatedPrice?:number|null,id:string,name:string,goal:number,alert:number,qty:number,value:number|null};
 export type Move={customerId?:string,contact?:string,pixKey?:string,paymentMethod?:string,paymentStatus?:string,loadId?:string,financialCleared?:boolean,id:string,material:string,type:string,qty:number,total:number|null,unitPrice?:number,cost:number|null,expense:number,date:string,party:string,note:string,created:string};
 export type Load={id:string,material:string,qty:number,party:string,date:string,status:string,total:number|null,unitPrice?:number,expense:number};
@@ -17,7 +17,7 @@ export function apply(s:State,c:any):State{
  }
  if(c.action==='customer'){
  s.customers??=[];const name=str(c.name,120);if(!name)throw Error('Informe o nome do cliente.');
- const data={name,contact:str(c.contact,100),pixKey:str(c.pixKey,200)};
+ const data={name,address:str(c.address,500),contact:str(c.contact,100),pixKey:str(c.pixKey,200)};
  if(c.id){const customer=s.customers.find(x=>x.id===c.id);if(!customer)throw Error('Cliente não encontrado.');Object.assign(customer,data);}else s.customers.push({id:crypto.randomUUID(),...data});return s;
  }
  if(c.action==='deleteCustomer'){
