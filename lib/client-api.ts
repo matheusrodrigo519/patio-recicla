@@ -1,4 +1,4 @@
-const BACKEND='https://patio-recicla-matheus.daringboar3.chatgpt.site';
+const BACKEND='https://patio-recicla-matheus.matheusrodrigo519.chatgpt.site';
 const KEY='patio-recicla-session';
 export async function apiFetch(path:string,init:RequestInit={}){
  const remote=typeof window!=='undefined'&&window.location.origin==='https://matheusrodrigo519.github.io';
