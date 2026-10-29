@@ -8,7 +8,8 @@ export const reserved=(s:State,id:string)=>s.loads.filter(l=>l.material===id&&![
 function num(v:any,min=0){const n=Number(v);if(v===''||v==null||!Number.isFinite(n)||n<min||n>1e12)throw Error('Informe um valor numérico válido.');return n;}
 function str(v:any,max=200){return String(v||'').trim().slice(0,max);}
 function date(v:any){if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v)))throw Error('Informe a data.');return v;}
-export const saleTotal=(qty:number,price:number)=>{const total=Math.round((num(qty,.001)*num(price)+Number.EPSILON)*100)/100;if(!Number.isFinite(total)||total>1e12)throw Error('Valor da venda excede o limite.');return total;};
+export const saleTotal=(qty:number,price:number)=>{const total=Math.round(num(qty,.001)*num(price)*100*(1+Number.EPSILON))/100;if(!Number.isFinite(total)||total>1e12)throw Error('Valor da venda excede o limite.');return total;};
+export const purchaseTotal=(qty:number,c:any):number|null=>Object.prototype.hasOwnProperty.call(c,'unitPrice')?(c.unitPrice===''||c.unitPrice==null?null:saleTotal(qty,num(c.unitPrice))):(c.total===''||c.total==null?null:num(c.total));
 export function apply(s:State,c:any):State{
  if(c.action==='valuation'){
  const m=s.materials.find(x=>x.id===c.material);if(!m)throw Error('Material não encontrado.');
@@ -37,10 +38,10 @@ export function apply(s:State,c:any):State{
  if(c.action==='load'){if(qty>m.qty-reserved(s,m.id)+.000001)throw Error('Peso disponível insuficiente para reservar.');s.loads.push({id:id(),material:m.id,qty,party:str(c.party),date:date(c.date),status:'Preparando',total:saleTotal(qty,num(c.unitPrice)),unitPrice:num(c.unitPrice),expense:num(c.expense||0)});return s;}
  if(c.action!=='move'||!['Entrada','Venda','Perda','Ajuste'].includes(c.type))throw Error('Operação inválida.');
  const entry=c.type==='Entrada'?entryDetails(s,c):{};
- let cost:number|null=null;const total=c.type==='Venda'&&!c.loadId?saleTotal(qty,num(c.unitPrice)):['Perda','Ajuste'].includes(c.type)?null:c.total===''||c.total==null?null:num(c.total);const expense=num(c.expense||0);const note=str(c.note,500);date(c.date);
+ let cost:number|null=null;const total=c.type==='Entrada'?purchaseTotal(qty,c):c.type==='Venda'&&!c.loadId?saleTotal(qty,num(c.unitPrice)):['Perda','Ajuste'].includes(c.type)?null:c.total===''||c.total==null?null:num(c.total);const expense=num(c.expense||0);const note=str(c.note,500);date(c.date);
  if(c.type==='Venda'&&total===null)throw Error('Informe o valor da venda.');if(c.type==='Perda'&&!note)throw Error('Informe o motivo da perda.');
  if(c.type==='Entrada'){m.value=m.value===null||total===null?null:m.value+total;m.qty+=qty;}else{const own=c.loadId?s.loads.find(l=>l.id===c.loadId)?.qty||0:0;if(qty>m.qty-reserved(s,m.id)+own+.000001)throw Error('Estoque disponível insuficiente. Confira as reservas.');cost=m.value===null?null:m.value/m.qty*qty;m.qty=Math.max(0,m.qty-qty);m.value=m.qty<.000001?0:m.value===null?null:Math.max(0,m.value-(cost||0));}
- s.moves.push({...entry,... (c.loadId?{loadId:c.loadId}:{}),id:id(),material:m.id,type:c.type,qty,total,...(c.type==='Venda'?{unitPrice:c.unitPrice==null?total!/qty:num(c.unitPrice)}:{}),cost,expense,date:c.date,party:str(c.party),note,created:new Date().toISOString()});return s;
+ s.moves.push({...entry,... (c.loadId?{loadId:c.loadId}:{}),id:id(),material:m.id,type:c.type,qty,total,...(['Entrada','Venda'].includes(c.type)&&total!==null?{unitPrice:c.unitPrice==null?total/qty:num(c.unitPrice)}:{}),cost,expense,date:c.date,party:str(c.party),note,created:new Date().toISOString()});return s;
 }
 
 // Removes stored historical amounts without rewriting physical inventory.
@@ -73,9 +74,10 @@ export function changeMove(original:State,c:any):State{
   old.qty=num(c.qty,.001);old.date=date(c.date);old.party=str(c.party);old.note=str(c.note,500);
   if(['Perda','Ajuste'].includes(old.type)&&!old.note)throw Error('Informe o motivo.');
   if(!old.financialCleared){
-   old.total=old.type==='Entrada'?(c.total===''||c.total==null?null:num(c.total)):old.type==='Venda'?saleTotal(old.qty,num(c.unitPrice)):null;
+   old.total=old.type==='Entrada'?purchaseTotal(old.qty,c):old.type==='Venda'?saleTotal(old.qty,num(c.unitPrice)):null;
    old.expense=old.type==='Venda'?num(c.expense||0):0;
    if(old.type==='Venda')old.unitPrice=num(c.unitPrice);
+   if(old.type==='Entrada'){if(old.total===null)delete old.unitPrice;else old.unitPrice=c.unitPrice==null?old.total/old.qty:num(c.unitPrice);}
   }
   if(linked){old.loadId=linked.id;Object.assign(linked,{qty:old.qty,total:old.total,unitPrice:old.unitPrice,expense:old.expense,party:old.party});}
  }
